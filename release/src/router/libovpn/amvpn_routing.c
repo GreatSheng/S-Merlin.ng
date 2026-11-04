@@ -102,7 +102,8 @@ void amvpn_clear_routing_rules(int unit, vpndir_proto_t proto) {
 	}
 	unlink(buffer);
 
-#if defined(RTCONFIG_WIREGUARD) && (defined(RTCONFIG_HND_ROUTER_AX_6756) || defined(RTCONFIG_BCM_502L07P2) || defined(RTCONFIG_HND_ROUTER_AX_675X)) || defined(RTCONFIG_HND_ROUTER_BE_4916)
+#if defined(RTCONFIG_WIREGUARD) && (defined(RTCONFIG_HND_ROUTER_AX_6756) || defined(RTCONFIG_BCM_502L07P2) || defined(RTCONFIG_HND_ROUTER_AX_675X) || defined(RTCONFIG_HND_ROUTER_BE_4916)) \
+ && !defined(WIFI7_SDK_20250506) && !defined(RTCONFIG_WIFI8)
 	// Remove all bypass for this unit
 	if (proto == VPNDIR_PROTO_WIREGUARD) {
 		_amvpn_apply_wg_bypass(unit, 0);
@@ -110,7 +111,8 @@ void amvpn_clear_routing_rules(int unit, vpndir_proto_t proto) {
 #endif
 }
 
-#if defined(RTCONFIG_WIREGUARD) && (defined(RTCONFIG_HND_ROUTER_AX_6756) || defined(RTCONFIG_BCM_502L07P2) || defined(RTCONFIG_HND_ROUTER_AX_675X)) || defined(RTCONFIG_HND_ROUTER_BE_4916)
+#if defined(RTCONFIG_WIREGUARD) && (defined(RTCONFIG_HND_ROUTER_AX_6756) || defined(RTCONFIG_BCM_502L07P2) || defined(RTCONFIG_HND_ROUTER_AX_675X) || defined(RTCONFIG_HND_ROUTER_BE_4916)) \
+ && !defined(WIFI7_SDK_20250506) && !defined(RTCONFIG_WIFI8)
 /* Add or remove WG bypass rules for a specific unit */
 void _amvpn_apply_wg_bypass(int unit, int add) {
 	char buffer[32], buffer2[128];
@@ -267,7 +269,8 @@ void _write_routing_rules(int unit, char *rules, int verb, vpndir_proto_t proto)
 	int ruleprio, vpnprio, wanprio;
 	char *enable, *desc, *target, *src, *dst;
 	char srcstr[64], dststr[64];
-#if defined(RTCONFIG_WIREGUARD) && (defined(RTCONFIG_HND_ROUTER_AX_6756) || defined(RTCONFIG_BCM_502L07P2) || defined(RTCONFIG_HND_ROUTER_AX_675X)) || defined(RTCONFIG_HND_ROUTER_BE_4916)
+#if defined(RTCONFIG_WIREGUARD) && (defined(RTCONFIG_HND_ROUTER_AX_6756) || defined(RTCONFIG_BCM_502L07P2) || defined(RTCONFIG_HND_ROUTER_AX_675X) || defined(RTCONFIG_HND_ROUTER_BE_4916)) \
+ && !defined(WIFI7_SDK_20250506) && !defined(RTCONFIG_WIFI8)
 	int ret;
 	char bypass_filename[64];
 #endif
@@ -314,7 +317,8 @@ void _write_routing_rules(int unit, char *rules, int verb, vpndir_proto_t proto)
 
 		if (*src && strcmp(src, "0.0.0.0")) {
 			snprintf(srcstr, sizeof (srcstr), "from %s", src);
-#if defined(RTCONFIG_WIREGUARD) && (defined(RTCONFIG_HND_ROUTER_AX_6756) || defined(RTCONFIG_BCM_502L07P2) || defined(RTCONFIG_HND_ROUTER_AX_675X)) || defined(RTCONFIG_HND_ROUTER_BE_4916)
+#if defined(RTCONFIG_WIREGUARD) && (defined(RTCONFIG_HND_ROUTER_AX_6756) || defined(RTCONFIG_BCM_502L07P2) || defined(RTCONFIG_HND_ROUTER_AX_675X) || defined(RTCONFIG_HND_ROUTER_BE_4916)) \
+ && !defined(WIFI7_SDK_20250506) && !defined(RTCONFIG_WIFI8)
 			if ((proto == VPNDIR_PROTO_WIREGUARD) && (!strncmp(target,"WGC", 3))) {
 				snprintf(bypass_filename, sizeof (bypass_filename), "/etc/wg/vpndirector%d", unit);
 
@@ -336,7 +340,8 @@ void _write_routing_rules(int unit, char *rules, int verb, vpndir_proto_t proto)
 		}
 		else {
 			*srcstr = '\0';
-#if defined(RTCONFIG_WIREGUARD) && (defined(RTCONFIG_HND_ROUTER_AX_6756) || defined(RTCONFIG_BCM_502L07P2) || defined(RTCONFIG_HND_ROUTER_AX_675X)) || defined(RTCONFIG_HND_ROUTER_BE_4916)
+#if defined(RTCONFIG_WIREGUARD) && (defined(RTCONFIG_HND_ROUTER_AX_6756) || defined(RTCONFIG_BCM_502L07P2) || defined(RTCONFIG_HND_ROUTER_AX_675X) || defined(RTCONFIG_HND_ROUTER_BE_4916)) \
+ && !defined(WIFI7_SDK_20250506) && !defined(RTCONFIG_WIFI8)
 			if ((proto == VPNDIR_PROTO_WIREGUARD) && (!strncmp(target,"WGC", 3))) {
 				snprintf(bypass_filename, sizeof (bypass_filename), "/etc/wg/vpndirector%d", unit);
 				f_write_string(bypass_filename, "LAN\n", FW_APPEND, 0);
@@ -1028,5 +1033,28 @@ void amvpn_set_kilswitch_rules_all() {
 #endif
 	for (i = OVPN_CLIENT_MAX; i > 0; i --) {
 		amvpn_set_killswitch_rules(VPNDIR_PROTO_OPENVPN, i, NULL);
+	}
+}
+
+/* Re-apply all VPN Director ip rules, such as after an "ip rule flush".
+ * Killswitch and policy rules are applied based on configuration;
+ * redirect-all rules only for running clients.
+ * Caller must hold VPNROUTING_LOCK. */
+void amvpn_set_all_routing_rules() {
+	int i;
+
+	amvpn_set_kilswitch_rules_all();
+	amvpn_set_wan_routing_rules();
+#ifdef RTCONFIG_WIREGUARD
+	for (i = WG_CLIENT_MAX; i > 0; i--) {
+		amvpn_set_routing_rules(i, VPNDIR_PROTO_WIREGUARD);
+	}
+#if (defined(RTCONFIG_HND_ROUTER_AX_6756) || defined(RTCONFIG_BCM_502L07P2) || defined(RTCONFIG_HND_ROUTER_AX_675X) || defined(RTCONFIG_HND_ROUTER_BE_4916)) \
+ && !defined(WIFI7_SDK_20250506) && !defined(RTCONFIG_WIFI8)
+	amvpn_refresh_wg_bypass_rules();
+#endif
+#endif
+	for (i = OVPN_CLIENT_MAX; i > 0; i--) {
+		amvpn_set_routing_rules(i, VPNDIR_PROTO_OPENVPN);
 	}
 }
