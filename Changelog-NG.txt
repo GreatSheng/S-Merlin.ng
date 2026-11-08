@@ -1,6 +1,37 @@
 Asuswrt-Merlin Changelog
 ========================
 
+3004.388.13 (7-Nov-2026)
+  - NEW: Migrated all devices to OpenSSL 3.5.
+         To work around closed source components linked against
+         OpenSSL 1.1.1, a shim was developped to pretend being
+         the openssl 1.1.1 library, redirecting calls to the
+         actual 3.5.x library.  A similar shim for 1.0.0.0 was
+         also implemented for WTFast.  (RSDNTWK)
+  - NEW: IPv6 support in Tor.  Previously, any IPv6 traffic
+         would leak outside of the proxy.  (Claude)
+  - UPDATED: amtm to 7.0. (decoderman)
+  - UPDATED: tor to 0.4.9.11.
+  - UPDATED: zoneinfo data to 2026c.
+  - UPDATED: OpenVPN to 2.7.8.
+  - UPDATED: haveged to 1.9.27.
+  - CHANGED: Tweaks to OpenVPN Server and Tor pages.  Use
+             the new CSS radio switcher instead of old
+             switcherplugin.
+  - CHANGED: Stop forcing FTP TLS to be (re-)enabled after
+             a firmware upgrade.
+  - CHANGED: Removed emSign ECC Root CA - G3 signing cert
+             from the CA bundle.
+  - FIXED: Various issues with Dual WAN failover/failback,
+           and DNS probing (TheUnboundDeveloper/Claude)
+  - FIXED: Various issues with the "Internet is down"
+           redirection page (TheUnboundDeveloper/Claude)
+  - FIXED: CVE-2026-107159 in miniupnpd.
+  - FIXED: Webui would stall or fail to load certain
+           elements when using Chrome on a self-signed
+           certificate. (Claude)
+
+
 3004.388.12_2 (20-Aug-2026)
   - UPDATED: OpenVPN to 2.7.6.
   - UPDATED: miniupnpd to 2.3.11.
