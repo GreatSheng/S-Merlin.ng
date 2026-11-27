@@ -2472,7 +2472,7 @@ void start_stubby(void)
 #endif
 {
 	const static char *stubby_config = "/etc/stubby/stubby.yml";
-	const static char *stubby_log = NULL;
+	const char *stubby_log = NULL;
 	char *stubby_argv[] = { "/usr/sbin/stubby",
 		"-g", /* Run in background via _eval, and will not write /var/run/stubby.pid */
 		"-C", (char *)stubby_config,
@@ -17610,6 +17610,7 @@ script_allnet:
 #endif
 			if(nvram_match("dhcp_war", "1"))
 				dhcp_war();
+			setup_leds();
 		}
 	}
 	else if (strcmp(script, "net_and_phy") == 0) {
@@ -17948,6 +17949,7 @@ script_allnet:
 #endif
 			if(nvram_match("dhcp_war", "1"))
 				dhcp_war();
+			setup_leds();
 		}
 #ifdef RTCONFIG_MULTILAN_CFG
 		handle_sdn_feature(ALL_SDN, SDN_FEATURE_ALL, action);
@@ -24687,33 +24689,40 @@ int service_main(int argc, char *argv[])
 void setup_leds()
 {
 	int AllLED = !!nvram_get_int("AllLED");
+	int inhibit = inhibit_led_on();		/* Disabled, or LED schedule off period */
+	int changed = 1;
 
 #ifdef RTCONFIG_SW_CTRL_ALLLED
-	/* Like the LED button and ctrl_led, only act on a state change (led_val
-	 * holds the last applied state): setAllLedNormal() resets the ledg/antled
-	 * schemes on some models, overriding a user-disabled Aura effect */
-	if (AllLED != !!nvram_get_int("led_val"))
+	/* led_val holds the last applied state (also kept by the LED button and ctrl_led) */
+	changed = (AllLED != !!nvram_get_int("led_val"));
 #endif
-	{
-		if (AllLED == 0)
-			setAllLedOff();
-		else
-			setAllLedNormal();
+
+	/* Always (re)apply the off state: radio reconfiguration (wlconf) resets the
+	 * driver-controlled WiFi LEDs, and setAllLedOff() is safe to repeat (it only
+	 * saves the ledg/antled schemes while they are non-zero).  Only turn LEDs on
+	 * upon a state change: setAllLedNormal() resets the ledg/antled schemes on
+	 * some models, overriding a user-disabled Aura effect. */
+	if (inhibit)
+		setAllLedOff();
+	else if (changed)
+		setAllLedNormal();
 
 #ifdef RTCONFIG_SW_CTRL_ALLLED
+	if (changed) {
 		nvram_set_int("led_val", AllLED);
 		nvram_commit();
+	}
 #endif
 
 #if defined(RTCONFIG_RGBLED)
+	if (inhibit || changed)
 		start_aurargb();
 #endif
-	}
 
 #ifdef RTCONFIG_HND_ROUTER_AX
 	/* Have wanduck refresh the WAN error LED: setAllLedOff() turned it off,
 	 * or led_wan_err may have just changed */
-	if (AllLED == 0)
+	if (inhibit)
 		kill_pidfile_s("/var/run/wanduck.pid", SIGUSR2);
 #endif
 }
