@@ -12786,6 +12786,7 @@ ftpServerTree_cgi(webs_t wp, char_t *urlPrefix, char_t *webDir, int arg,
 	else
 		websWrite(wp,"%s",buf);
 
+	free(buf);
 	return 0;
 }
 

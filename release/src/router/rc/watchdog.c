@@ -7932,6 +7932,11 @@ void ddns_check(void)
 	if (!nvram_get_int("ddns_enable_x"))
 		return;
 
+	/* No point retrying without a hostname (Custom and Oray don't need one) */
+	if (nvram_match("ddns_hostname_x", "") &&
+	    !nvram_match("ddns_server_x", "CUSTOM") && !nvram_match("ddns_server_x", "WWW.ORAY.COM"))
+		return;
+
 #if defined(RTCONFIG_DUALWAN)
 	if (nvram_match("wans_mode", "lb")) {
 		int ddns_wan_unit = nvram_get_int("ddns_wan_unit");
